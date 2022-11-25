@@ -20,7 +20,11 @@
       }
       console.log(window.webkit);
       window.webkit.messageHandlers.JSBridge.postMessage({
-        test: 1111
+        method: 'test',
+        param: '{"test":1}',
+        callback: function () {
+          console.log('callback')
+        }
       })
     }
   </script>
