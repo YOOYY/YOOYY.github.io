@@ -15,12 +15,18 @@
     // new VConsole();
     // console.log(1111)
     function test() {
-      alert(11);
       if (!window.webkit) {
-        console.log('没有找到webkit');
+        alert('没有找到webkit')
         return;
       }
-      // console.log(window.webkit);
+      if (!window.webkit.messageHandlers) {
+        alert('没有找到messageHandlers')
+        return;
+      }
+      if (!window.webkit.messageHandlers.JSBridge) {
+        alert('没有找到JSBridge')
+        return;
+      }
       window.webkit.messageHandlers.JSBridge.postMessage({
         method: 'test',
         param: '{"test":1}',
