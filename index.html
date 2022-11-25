@@ -9,11 +9,20 @@
 </head>
 
 <body>
-  <div id="test"></div>
+  <button onclick="test()">测试</button>
   <script src="https://cdn.bootcdn.net/ajax/libs/vConsole/3.15.0/vconsole.min.js"></script>
   <script>
     new VConsole();
-    console.log(window)
+    function test() {
+      if (!window.webkit) {
+        console.log('没有找到webkit');
+        return;
+      }
+      console.log(window.webkit);
+      window.webkit.messageHandlers.JSBridge.postMessage({
+        test: 1111
+      })
+    }
   </script>
 </body>
 
