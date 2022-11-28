@@ -12,28 +12,15 @@
   <button onclick="test()">测试</button>
   <!-- <script src="https://cdn.bootcdn.net/ajax/libs/vConsole/3.15.0/vconsole.min.js"></script> -->
   <script>
-    // new VConsole();
-    // console.log(1111)
     function test() {
-      if (!window.webkit) {
-        alert('没有找到webkit')
-        return;
+      try {
+        window.webkit.messageHandlers.JSBridge.postMessage({
+          method: 'test',
+          param: '{"test":1}'
+        })
+      } catch (error) {
+        alert('发生错误', error)
       }
-      if (!window.webkit.messageHandlers) {
-        alert('没有找到messageHandlers')
-        return;
-      }
-      if (!window.webkit.messageHandlers.JSBridge) {
-        alert('没有找到JSBridge')
-        return;
-      }
-      window.webkit.messageHandlers.JSBridge.postMessage({
-        method: 'test',
-        param: '{"test":1}',
-        callback: function () {
-          console.log('callback')
-        }
-      })
     }
   </script>
 </body>
