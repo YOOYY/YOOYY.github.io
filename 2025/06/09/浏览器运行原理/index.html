@@ -1,0 +1,269 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>浏览器运行原理 | 墨竹小站</title><meta name="author" content="墨竹摇曳"><meta name="copyright" content="墨竹摇曳"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="进程和线程进程是cpu资源分配的最小单位，是能拥有资源和独立运行的最小单位。一个进程就是一个程序的运行实例。线程是cpu调度的最小单位，线程是建立在进程的基础上的一次程序运行单位。线程是不能单独存在的，它是由进程来启动和管理的。进程和线程之间的关系有以下 4 个特点：  进程中的任意一线程执行出错，都会导致整个进程的崩溃 线程之间共享进程中的数据 当一个进程关闭之后，操作系统会回收进程所占用的内存">
+<meta property="og:type" content="article">
+<meta property="og:title" content="浏览器运行原理">
+<meta property="og:url" content="https://yooyy.github.io/2025/06/09/%E6%B5%8F%E8%A7%88%E5%99%A8%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/index.html">
+<meta property="og:site_name" content="墨竹小站">
+<meta property="og:description" content="进程和线程进程是cpu资源分配的最小单位，是能拥有资源和独立运行的最小单位。一个进程就是一个程序的运行实例。线程是cpu调度的最小单位，线程是建立在进程的基础上的一次程序运行单位。线程是不能单独存在的，它是由进程来启动和管理的。进程和线程之间的关系有以下 4 个特点：  进程中的任意一线程执行出错，都会导致整个进程的崩溃 线程之间共享进程中的数据 当一个进程关闭之后，操作系统会回收进程所占用的内存">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://yooyy.github.io/img/cover-banner.png">
+<meta property="article:published_time" content="2025-06-09T00:06:00.788Z">
+<meta property="article:modified_time" content="2025-06-12T03:52:59.511Z">
+<meta property="article:author" content="墨竹摇曳">
+<meta property="article:tag" content="浏览器">
+<meta property="article:tag" content="浏览器运行原理">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://yooyy.github.io/img/cover-banner.png"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "浏览器运行原理",
+  "url": "https://yooyy.github.io/2025/06/09/%E6%B5%8F%E8%A7%88%E5%99%A8%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/",
+  "image": "https://yooyy.github.io/img/cover-banner.png",
+  "datePublished": "2025-06-09T00:06:00.788Z",
+  "dateModified": "2025-06-12T03:52:59.511Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "墨竹摇曳",
+      "url": "https://yooyy.github.io/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://yooyy.github.io/2025/06/09/%E6%B5%8F%E8%A7%88%E5%99%A8%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><link rel="stylesheet" href="/css/fancybox.min.css" media="print" onload="this.media='all'"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.bootcdn.net/ajax/libs/egjs-infinitegrid/4.12.0/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: true,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '浏览器运行原理',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.3.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+  window.addEventListener('load', preloader.endLoading)
+
+  if (false) {
+    btf.addGlobalFn('pjaxSend', preloader.initLoading, 'preloader_init')
+    btf.addGlobalFn('pjaxComplete', preloader.endLoading, 'preloader_end')
+  }
+})()</script><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/user.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 个人简历</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/cover-banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"></a><a class="nav-page-title" href="/"><span class="site-name">浏览器运行原理</span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 个人简历</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">浏览器运行原理</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-06-09T00:06:00.788Z" title="发表于 2025-06-09 08:06:00">2025-06-09</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-06-12T03:52:59.511Z" title="更新于 2025-06-12 11:52:59">2025-06-12</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%B5%8F%E8%A7%88%E5%99%A8/">浏览器</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h3 id="进程和线程"><a href="#进程和线程" class="headerlink" title="进程和线程"></a>进程和线程</h3><p>进程是cpu资源分配的最小单位，是能拥有资源和独立运行的最小单位。一个进程就是一个程序的运行实例。<br>线程是cpu调度的最小单位，线程是建立在进程的基础上的一次程序运行单位。线程是不能单独存在的，它是由进程来启动和管理的。<br>进程和线程之间的关系有以下 4 个特点：</p>
+<ol>
+<li>进程中的任意一线程执行出错，都会导致整个进程的崩溃</li>
+<li>线程之间共享进程中的数据</li>
+<li>当一个进程关闭之后，操作系统会回收进程所占用的内存</li>
+<li>进程之间的内容相互隔离</li>
+</ol>
+<h3 id="多进程浏览器"><a href="#多进程浏览器" class="headerlink" title="多进程浏览器"></a>多进程浏览器</h3><h4 id="组成"><a href="#组成" class="headerlink" title="组成"></a>组成</h4><ul>
+<li>Browser进程(浏览器进程)，浏览器的主进程，主要包括以下功能：<ul>
+<li>子进程管理，创建，销毁和协调其他进程，提供IPC通信</li>
+<li>绘制用户界面，主要包括：地址栏，后退&#x2F;前进按钮，书签目录等，不包括网页窗口；以及将从渲染进程得到的内存中的Bitmap（位图），绘制到用户界面上</li>
+<li>数据存储，在硬盘中保存类似cookie,local storage的各种数据</li>
+<li>用户交互</li>
+</ul>
+</li>
+<li>浏览器渲染进程（浏览器内核）：<ul>
+<li>默认每个Tab页面一个进程，互不影响。出于安全考虑，渲染进程都是运行在沙箱模式下</li>
+<li>内部是多线程的，渲染引擎和 JavaScript 引擎都是运行在该进程中</li>
+<li>任务是页面渲染（将 HTML、CSS 和 JavaScript 转换为用户可以与之交互的网页），脚本执行，事件处理等</li>
+<li>Internet Explorer 使用 Trident；Firefox 使用 Gecko、Safari 使用 WebKit；Chrome ，Edge 和 Opera使用 Blink，即 WebKit 的一个分支</li>
+</ul>
+</li>
+<li>GPU进程：最多一个，合成分层位图，3D绘制等</li>
+<li>网络进程：主要负责页面的网络资源加载</li>
+<li>第三方插件进程：每种类型的插件对应一个进程，仅当使用该插件时才创建</li>
+</ul>
+<h4 id="浏览器多进程的优势"><a href="#浏览器多进程的优势" class="headerlink" title="浏览器多进程的优势"></a>浏览器多进程的优势</h4><ul>
+<li>稳定，避免单个页面或插件崩溃影响整个浏览器</li>
+<li>流畅，单个页面的复杂计算不会影响其他页面</li>
+<li>多进程充分利用多核优势</li>
+<li>方便使用沙盒模型隔离插件等进程，提高浏览器安全性</li>
+</ul>
+<h3 id="渲染进程组成"><a href="#渲染进程组成" class="headerlink" title="渲染进程组成"></a>渲染进程组成</h3><ul>
+<li>主线程 (Main)：负责 HTML&#x2F;CSS 解析，JS 执行，样式计算（Recalculate Style），布局（Layout），生成绘制列表（Paint）, 主要调用的模块包括渲染引擎和js引擎<ul>
+<li>JS引擎负责解析Javascript脚本，运行代码，主要有V8（Chrome &#x2F; Edge）、SpiderMonkey（firefox）、JavaScriptCore（safari）</li>
+<li>渲染引擎负责渲染浏览器界面，主要有Blink（Chrome &#x2F; Edge）、Gecko（firefox）、Webkit（safari）</li>
+</ul>
+</li>
+<li>合成线程 (Compositor)： 合成图层（Layer），处理滚动、动画等“非主线程绘制”</li>
+<li>光栅线程 (Raster)：将主线程或合成线程生成的绘制指令（Display List），转化为像素图（位图）；支持并发，多线程运行</li>
+<li>GPU 线程：接收光栅线程生成的位图，调用 OpenGL 或 Vulkan 等 GPU 接口进行合成显示</li>
+<li>输入&#x2F;事件线程（Input Event Handling Thread）：接收和初步处理鼠标、键盘、滚动等用户输入事件；比如使用 passive: true 时，表示开发者不会调用 event.preventDefault()，浏览器就可以让合成线程提前处理滚动，从而提升滑动流畅度。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Input Thread → 判断 passive → Compositor Thread → 直接触发滚动</span><br><span class="line">            ↘ 非 passive → Main Thread 执行 handler</span><br></pre></td></tr></table></figure>
+
+<h3 id="浏览器缓存机制"><a href="#浏览器缓存机制" class="headerlink" title="浏览器缓存机制"></a>浏览器缓存机制</h3><h4 id="缓存资源分类"><a href="#缓存资源分类" class="headerlink" title="缓存资源分类"></a>缓存资源分类</h4><p>目前Webkit资源分成两类，一类是主资源，比如HTML页面，或者下载项，一类是派生资源，比如HTML页面中内嵌的图片或者脚本链接，分别对应代码中两个类：MainResourceLoader和SubresourceLoader。</p>
+<h4 id="缓存位置"><a href="#缓存位置" class="headerlink" title="缓存位置"></a>缓存位置</h4><h5 id="MemoryCache（内存缓存）"><a href="#MemoryCache（内存缓存）" class="headerlink" title="MemoryCache（内存缓存）"></a>MemoryCache（内存缓存）</h5><p>缓存策略：主要由浏览器内部策略管理，不受 Cache-Control: no-store 以外的缓存首部的影响；<br>优先考虑的资源类型：GET 请求、预加载资源、图片、脚本、样式等静态资源<br>清除策略：标签页关闭、内存紧张、LRU淘汰策略<br>特点：读取高效，缓存持续性很短</p>
+<h5 id="Service-Worker"><a href="#Service-Worker" class="headerlink" title="Service Worker"></a>Service Worker</h5><p>是一种在浏览器后台运行的独立线程，常用于 拦截请求、缓存资源、离线访问 等高级功能，是构建 PWA（渐进式 Web 应用）的核心之一</p>
+<h5 id="diskCache（硬盘缓存）"><a href="#diskCache（硬盘缓存）" class="headerlink" title="diskCache（硬盘缓存）"></a>diskCache（硬盘缓存）</h5><p>缓存策略：由后端的 HTTP 响应头严格控制<br>优先考虑的资源类型：GET 请求、预加载资源、图片、脚本、样式等静态资源<br>特点：读取速度慢，比之 Memory Cache胜在容量和存储时效性上。</p>
+<h5 id="Push-Cache（推送缓存）"><a href="#Push-Cache（推送缓存）" class="headerlink" title="Push Cache（推送缓存）"></a>Push Cache（推送缓存）</h5><p>HTTP&#x2F;2 中的内容，当以上三种缓存都没有命中时，它才会被使用。一旦连接被关闭，Push Cache 就被释放，并且缓存时间也很短暂，在Chrome浏览器中只有5分钟左右，同时它也并非严格执行HTTP头中的缓存指令。</p>
+<h4 id="缓存流程"><a href="#缓存流程" class="headerlink" title="缓存流程"></a>缓存流程</h4><p>浏览器第一次请求得到的数据，通常会将一些静态资源缓存到本地，内存中或者磁盘中，并且响应头中会有这些缓存的过期时间。在过期时间之内，浏览器再次请求这些数据时会直接从本地缓存获取。如果超过过期时间，浏览器再次请求这些数据，服务器收到请求后，并不会立马将资源返回给客户端。而是先从请求头的一些信息中判断这次请求的资源有没有变化，如果没有变化，那么会返回给客户端一个：304 Not Modified状态码。告诉浏览器这次请求的资源没有变化，可以直接从缓存中获取，并且刷新缓存时间，如果变化了就返回200状态码和最新的资源。</p>
+<h4 id="无法被浏览器缓存的请求"><a href="#无法被浏览器缓存的请求" class="headerlink" title="无法被浏览器缓存的请求"></a>无法被浏览器缓存的请求</h4><ul>
+<li>响应头禁止缓存，如Cache-Control:no-store，pragma:no-cache</li>
+<li>fetch() 或 XMLHttpRequest 的特殊配置</li>
+<li>非 GET 请求</li>
+<li>Set-Cookie 响应常常被浏览器特别对待，缓存行为受限</li>
+<li>某些响应类型或状态码，状态码非 200（如 500、403）通常不会被缓存；Content-Disposition: attachment 一般用于下载，默认不缓存；非 HTTP(s) 协议（如 FTP）或 blob、data URI 类型请求</li>
+<li>用户设置或模式限制缓存，浏览器开启隐身模式或用户或扩展禁用了缓存</li>
+</ul>
+<h4 id="不同用户行为的缓存行为"><a href="#不同用户行为的缓存行为" class="headerlink" title="不同用户行为的缓存行为"></a>不同用户行为的缓存行为</h4><ul>
+<li>强制刷新（ctrl+F5）：不使用强缓存，也不走协商缓存，全部重新下载资源，请求头中不包含If-Modified-Since和 If-None-Match，包含Pragma: no-cache和Cache-Control: no-cache</li>
+<li>普通刷新（F5）：先检查协商缓存，如果资源未变 → 返回 304，不重新下载</li>
+<li>链接点击&#x2F;新开窗口&#x2F;地址栏输入地址，检查强缓存，然后检查协商缓存，新开窗口在域名不一致的情况下应该不会使用内存缓存</li>
+<li>前进&#x2F;后退：会命中Back-Forward Cache，用于快速恢复页面</li>
+</ul>
+<p><img src="/img/posts/cache.png" alt="缓存流程图"></p>
+<p>http1.0中的缓存控制：</p>
+<p>Pragma：严格来说，它不属于专门的缓存控制头部，但是它设置no-cache时可以让本地强缓存失效（属于编译控制，来实现特定的指令，主要是因为兼容http1.0，所以以前又被大量应用）<br>Expires：服务端配置的，属于强缓存，用来控制在规定的时间之前，浏览器不会发出请求，而是直接使用本地缓存，注意，Expires一般对应服务器端时间，如Expires：Fri, 30 Oct 1998 14:19:41<br>If-Modified-Since&#x2F;Last-Modified：这两个是成对出现的，属于协商缓存的内容，其中浏览器的头部是If-Modified-Since，而服务端的是Last-Modified，它的作用是，在发起请求时，如果If-Modified-Since和Last-Modified匹配，那么代表服务器资源并未改变，因此服务端不会返回资源实体，而是只返回头部，通知浏览器可以使用本地缓存。Last-Modified，顾名思义，指的是文件最后的修改时间，而且只能精确到1s以内<br>http1.1中的缓存控制：</p>
+<p>Cache-Control：缓存控制头部，有no-cache、max-age等多种取值<br>Max-Age：服务端配置的，用来控制强缓存，在规定的时间之内，浏览器无需发出请求，直接使用本地缓存，注意，Max-Age是Cache-Control头部的值，不是独立的头部，譬如Cache-Control: max-age&#x3D;3600，而且它值得是绝对时间，由浏览器自己计算<br>If-None-Match&#x2F;E-tag：这两个是成对出现的，属于协商缓存的内容，其中浏览器的头部是If-None-Match，而服务端的是E-tag，同样，发出请求后，如果If-None-Match和E-tag匹配，则代表内容未变，通知浏览器使用本地缓存，和Last-Modified不同，E-tag更精确，它是类似于指纹一样的东西，基于FileEtag INode Mtime Size生成，也就是说，只要文件变，指纹就会变，而且没有1s精确度的限制。<br>Max-Age相比Expires？</p>
+<p>Expires使用的是服务器端的时间</p>
+<p>但是有时候会有这样一种情况-客户端时间和服务端不同步</p>
+<p>那这样，可能就会出问题了，造成了浏览器本地的缓存无用或者一直无法过期</p>
+<p>所以一般http1.1后不推荐使用Expires</p>
+<p>而Max-Age使用的是客户端本地时间的计算，因此不会有这个问题</p>
+<p>因此推荐使用Max-Age。</p>
+<p>注意，如果同时启用了Cache-Control与Expires，Cache-Control优先级高。</p>
+<p>E-tag相比Last-Modified？</p>
+<p>Last-Modified：</p>
+<p>表明服务端的文件最后何时改变的<br>它有一个缺陷就是只能精确到1s，<br>然后还有一个问题就是有的服务端的文件会周期性的改变，导致缓存失效<br>而E-tag：</p>
+<p>是一种指纹机制，代表文件相关指纹<br>只有文件变才会变，也只要文件变就会变，<br>也没有精确时间的限制，只要文件一遍，立马E-tag就不一样了<br>如果同时带有E-tag和Last-Modified，服务端会优先检查E-tag<br><a target="_blank" rel="noopener" href="https://segmentfault.com/img/remote/1460000013662139">https://segmentfault.com/img/remote/1460000013662139</a></p>
+<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><ul>
+<li><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000012925872">从浏览器多进程到JS单线程，JS运行机制最全面的一次梳理</a></li>
+<li><a target="_blank" rel="noopener" href="https://web.dev/articles/howbrowserswork">浏览器的工作方式</a></li>
+<li><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000013662126">从输入URL到页面加载的过程</a></li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://YOOYY.github.io">墨竹摇曳</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://yooyy.github.io/2025/06/09/%E6%B5%8F%E8%A7%88%E5%99%A8%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/">https://yooyy.github.io/2025/06/09/%E6%B5%8F%E8%A7%88%E5%99%A8%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://YOOYY.github.io" target="_blank">墨竹小站</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%B5%8F%E8%A7%88%E5%99%A8/">浏览器</a><a class="post-meta__tags" href="/tags/%E6%B5%8F%E8%A7%88%E5%99%A8%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/">浏览器运行原理</a></div><div class="post-share"><div class="social-share" data-image="/img/cover-banner.png" data-sites="wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2025/06/10/%E5%B8%B8%E8%A7%81%E6%8E%92%E5%BA%8F%E7%AE%97%E6%B3%95/" title=""><img class="cover" src="/img/cover-banner.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2"></div></div><div class="info-2"><div class="info-item-1">冒泡排序12345678910111213const swap = (arr, a, b) =&gt; &#123;    [arr[a], arr[b]] = [arr[b], arr[a]]&#125;function sort(arr) &#123;    for (let i = 0; i &lt; arr.length - 1; i++) &#123;        for (let j = 0; j &lt; arr.length - 1 - i; j++) &#123;            if (arr[j] &gt; arr[j + 1]) &#123;                swap(arr, j, j + 1)            &#125;        &#125;    &#125;&#125;  选择排序123456789101112131415const swap = (arr, a, b) =&gt; &#123;    [arr[a], arr[b]] = [arr[b], arr[a]]&#125;function sort(a...</div></div></div></a><a class="pagination-related" href="/2025/06/08/Vue%20%E8%99%9A%E6%8B%9FDom/" title="Vue 虚拟Dom"><img class="cover" src="/img/cover-banner.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Vue 虚拟Dom</div></div><div class="info-2"><div class="info-item-1">Vue1的响应式弊端在Vue1的版本中，每次响应式数据发生变化，就会对相应的dom进行更新操作，下面是其简易实现： 1234&lt;div id=&quot;app&quot;&gt;    &lt;p&gt;&#123;&#123; message &#125;&#125;&lt;/p&gt;    &lt;p&gt;&#123;&#123; count &#125;&#125;&lt;/p&gt;&lt;/div&gt;  12345678910111213141516171819202122232425262728// Watcher, observe 的实现可以看响应式原理那篇文章function compile(node, data) &#123;    const reg = /\&#123;\&#123;\s*(\w+)\s*\&#125;\&#125;/;    Array.from(node.childNodes).forEach(child =&gt; &#123;        //文本节点        if (child.nodeType === 3) ...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/user.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">墨竹摇曳</div><div class="author-info-description">严于律己，宽于律人</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">6</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/YOOYY"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客！</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BF%9B%E7%A8%8B%E5%92%8C%E7%BA%BF%E7%A8%8B"><span class="toc-number">1.</span> <span class="toc-text">进程和线程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A4%9A%E8%BF%9B%E7%A8%8B%E6%B5%8F%E8%A7%88%E5%99%A8"><span class="toc-number">2.</span> <span class="toc-text">多进程浏览器</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%BB%84%E6%88%90"><span class="toc-number">2.1.</span> <span class="toc-text">组成</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A4%9A%E8%BF%9B%E7%A8%8B%E7%9A%84%E4%BC%98%E5%8A%BF"><span class="toc-number">2.2.</span> <span class="toc-text">浏览器多进程的优势</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B8%B2%E6%9F%93%E8%BF%9B%E7%A8%8B%E7%BB%84%E6%88%90"><span class="toc-number">3.</span> <span class="toc-text">渲染进程组成</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E7%BC%93%E5%AD%98%E6%9C%BA%E5%88%B6"><span class="toc-number">4.</span> <span class="toc-text">浏览器缓存机制</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%BC%93%E5%AD%98%E8%B5%84%E6%BA%90%E5%88%86%E7%B1%BB"><span class="toc-number">4.1.</span> <span class="toc-text">缓存资源分类</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%BC%93%E5%AD%98%E4%BD%8D%E7%BD%AE"><span class="toc-number">4.2.</span> <span class="toc-text">缓存位置</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#MemoryCache%EF%BC%88%E5%86%85%E5%AD%98%E7%BC%93%E5%AD%98%EF%BC%89"><span class="toc-number">4.2.1.</span> <span class="toc-text">MemoryCache（内存缓存）</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Service-Worker"><span class="toc-number">4.2.2.</span> <span class="toc-text">Service Worker</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#diskCache%EF%BC%88%E7%A1%AC%E7%9B%98%E7%BC%93%E5%AD%98%EF%BC%89"><span class="toc-number">4.2.3.</span> <span class="toc-text">diskCache（硬盘缓存）</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#Push-Cache%EF%BC%88%E6%8E%A8%E9%80%81%E7%BC%93%E5%AD%98%EF%BC%89"><span class="toc-number">4.2.4.</span> <span class="toc-text">Push Cache（推送缓存）</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E7%BC%93%E5%AD%98%E6%B5%81%E7%A8%8B"><span class="toc-number">4.3.</span> <span class="toc-text">缓存流程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%97%A0%E6%B3%95%E8%A2%AB%E6%B5%8F%E8%A7%88%E5%99%A8%E7%BC%93%E5%AD%98%E7%9A%84%E8%AF%B7%E6%B1%82"><span class="toc-number">4.4.</span> <span class="toc-text">无法被浏览器缓存的请求</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%B8%8D%E5%90%8C%E7%94%A8%E6%88%B7%E8%A1%8C%E4%B8%BA%E7%9A%84%E7%BC%93%E5%AD%98%E8%A1%8C%E4%B8%BA"><span class="toc-number">4.5.</span> <span class="toc-text">不同用户行为的缓存行为</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="toc-number">5.</span> <span class="toc-text">参考资料</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2025/06/11/%E5%B8%B8%E8%A7%81%E6%9F%A5%E6%89%BE%E7%AE%97%E6%B3%95/" title="无标题"><img src="/img/cover-banner.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2025/06/11/%E5%B8%B8%E8%A7%81%E6%9F%A5%E6%89%BE%E7%AE%97%E6%B3%95/" title="无标题">无标题</a><time datetime="2025-06-11T02:07:47.206Z" title="发表于 2025-06-11 10:07:47">2025-06-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/06/10/%E5%B8%B8%E8%A7%81%E6%8E%92%E5%BA%8F%E7%AE%97%E6%B3%95/" title="无标题"><img src="/img/cover-banner.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="无标题"/></a><div class="content"><a class="title" href="/2025/06/10/%E5%B8%B8%E8%A7%81%E6%8E%92%E5%BA%8F%E7%AE%97%E6%B3%95/" title="无标题">无标题</a><time datetime="2025-06-10T10:11:22.749Z" title="发表于 2025-06-10 18:11:22">2025-06-10</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/06/09/%E6%B5%8F%E8%A7%88%E5%99%A8%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/" title="浏览器运行原理"><img src="/img/cover-banner.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="浏览器运行原理"/></a><div class="content"><a class="title" href="/2025/06/09/%E6%B5%8F%E8%A7%88%E5%99%A8%E8%BF%90%E8%A1%8C%E5%8E%9F%E7%90%86/" title="浏览器运行原理">浏览器运行原理</a><time datetime="2025-06-09T00:06:00.788Z" title="发表于 2025-06-09 08:06:00">2025-06-09</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/06/08/Vue%20%E8%99%9A%E6%8B%9FDom/" title="Vue 虚拟Dom"><img src="/img/cover-banner.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue 虚拟Dom"/></a><div class="content"><a class="title" href="/2025/06/08/Vue%20%E8%99%9A%E6%8B%9FDom/" title="Vue 虚拟Dom">Vue 虚拟Dom</a><time datetime="2025-06-08T06:59:27.878Z" title="发表于 2025-06-08 14:59:27">2025-06-08</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/06/08/Vue%20Patching%E7%AE%97%E6%B3%95/" title="Vue Patching算法"><img src="/img/cover-banner.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Vue Patching算法"/></a><div class="content"><a class="title" href="/2025/06/08/Vue%20Patching%E7%AE%97%E6%B3%95/" title="Vue Patching算法">Vue Patching算法</a><time datetime="2025-06-08T06:56:05.743Z" title="发表于 2025-06-08 14:56:05">2025-06-08</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;2025 By 墨竹摇曳</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.4.0-b2</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="/js/fancybox.min.js"></script><div class="js-pjax"></div><script defer="defer" id="fluttering_ribbon" mobile="false" src="/js/canvas-fluttering-ribbon.min.js"></script><script id="click-heart" src="/js/click_heart.js" async="async" mobile="false"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
